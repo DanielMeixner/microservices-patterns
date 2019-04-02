@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shareddisk-for-config-sidecar-sample2
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: default
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: config-sidecar-pod
+  labels:
+      app: ConfigSideCarApp
+spec:
+  shareProcessNamespace: true
+  containers:
+  - name: configdisplaycontainer
+    image: danielmeixner/configdisplaycontainer:latest
+    ports:
+      - containerPort: 8889
+        name: displayport 
+    volumeMounts:
+      - mountPath: "/mnt/sharedfolder"
+        name: volume
+  - name: configwritercontainer
+    image: danielmeixner/configwritercontainer:latest
+    ports:
+      - containerPort: 8890        
+        name: writeport 
+    volumeMounts:
+      - mountPath: "/mnt/sharedfolder"
+        name: volume
+  volumes:
+    - name: volume
+      persistentVolumeClaim:
+        claimName: shareddisk-for-config-sidecar-sample2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-sidecar-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: ConfigSideCarApp
+  ports:
+  - protocol: TCP
+    port: 80    
+    name: dport
+    targetPort: 8889
+  - protocol: TCP
+    port: 8890 
+    name: cport   
+    targetPort: 8890
