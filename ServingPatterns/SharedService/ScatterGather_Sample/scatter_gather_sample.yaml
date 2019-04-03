@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: compute-svc-sfs
+spec:
+  serviceName: compute-svc
+  replicas: 3 # by default is 1
+  template:
+    metadata:
+      labels:
+        app: compute-svc # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: countprimes
+        image: danielmeixner/scworkercontainer
+        ports:
+        - containerPort: 8893
+          name: web
+  selector:
+    matchLabels:
+      app: compute-svc # has to match .spec.template.metadata.labels
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: compute-svc
+  labels:
+    app: compute-svc
+spec:
+  ports:
+  - port: 80
+    name: web
+  #type: ClusterIP #Headless!
+  clusterIP: None
+  selector: 
+    app: compute-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scdistributor-svc
+  labels:    
+    app: scdistributor  
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    name: scdistributor
+    targetPort: 8892
+  selector:
+    app: scdistributor
+---
+apiVersion: "v1"
+kind: Pod
+metadata:
+  name: scdistributor
+  labels:
+    app: scdistributor    
+spec:
+  containers:
+    - name: scdistributor
+      image: danielmeixner/scdistributorcontainer
+      ports:
+        - containerPort: 8892
+          name: http         
+          protocol: TCP
+---
