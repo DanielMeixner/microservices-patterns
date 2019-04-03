@@ -1,0 +1,78 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: sharded-memcache
+spec:
+  serviceName: "memcache"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: memcache
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: memcache
+        image: memcached
+        ports:
+        - containerPort: 11211
+          name: memcache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcache
+  labels:
+    app: memcache
+spec:
+  ports:
+  - port: 11211
+    name: memcache
+  clusterIP: None
+  selector:
+    app: memcache
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: twem-config
+  namespace: default
+data:
+  nutcracker.yaml: "memcache:\r\n  listen: 127.0.0.1:11211\r\n  hash: fnv1a_64\r\n
+    \ distribution: ketama\r\n  auto_eject_hosts: true\r\n  timeout: 400\r\n  server_retry_timeout:
+    2000\r\n  server_failure_limit: 1\r\n  servers:\r\n   - sharded-memcache-0.memcache:11211:1\r\n
+    \  - sharded-memcache-1.memcache:11211:1\r\n   - sharded-memcache-2.memcache:11211:1"  
+---
+### ambassador
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sharded-memcache-ambassador
+  labels:
+    app: ambassador
+spec:
+  containers:
+    # This is where the application container would go, for example
+    - name: memcacheclient
+      image: danielmeixner/memcachedclientcontainer
+      ports:
+        - containerPort: 8891        
+    # This is the ambassador container
+    - name: twemproxy
+      image: ganomede/twemproxy
+      command:
+      - nutcracker
+      - -c
+      - /etc/config/nutcracker.yaml
+      - -v
+      - "7"
+      - -s
+      - "6222"
+      volumeMounts:
+      - name: config-volume
+        mountPath: /etc/config
+  volumes:
+    - name: config-volume
+      configMap:
+        name: twem-config
+  
