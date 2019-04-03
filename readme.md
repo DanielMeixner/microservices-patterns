@@ -6,7 +6,7 @@ All container images used are on docker hub. The source code of images I created
 
 The sample apps are mostly node web apps without any fancy UI - or no UI at all. I really wanted to keep implementation minimal to focus on the pattern, not the app.
 
-## Patterns found
+## Patterns 
 * Sidecar - for reuse ([anycode sample](SingleNodePatterns\Sidecar\AnyCodeSidecar_Sample\readme.md))
 * Sidecar - for configuration ([ConfigSidecar](SingleNodePatterns\Sidecar\ConfigSidecar_Sample\readme.md))
 * Ambassador ([part of SharedService sample](ServingPatterns\SharedService\readme.md) )
